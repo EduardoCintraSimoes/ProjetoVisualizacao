@@ -28,17 +28,7 @@
 			<option value="200" />
 			<option value="300" />
 			<option value="400" />
-			<option value="500" />
-			<option value="600" />
-			<option value="700" />
-			<option value="800" />
-			<option value="900" />
-			<option value="1000" />
 		</datalist>
-
-		<p id="demo"></p></br>
-
-		</br>
 
 		<script>
 //  Classes  //
@@ -92,6 +82,7 @@
 					return [isValid, nameValue, colorValue];
 				}
 			}
+			
 			class ClassificationInfo {
 				constructor(element) {
 					this.classification = element.classification;
@@ -107,6 +98,7 @@
 					}
 				}
 			}
+			
 			class ExtractionInfo {
 				constructor(infoName, sim, conf) {
 					this.infoName = infoName;
@@ -155,31 +147,37 @@
 				}
 				
 				updateMap() {
+					let qtd = this.extractInfo.length;
+				
 					// preprocessamento
 					let processName = this.procError == 1 ? "1_Error" : "1_OK";
 					let validProcess = processName === "1_OK";
-					incrementSankeyData("0_Base", processName, validProcess ? "#00dd00" : "#dd0000" )
+					
+					incrementSankeyData("0_Base", processName, qtd, validProcess ? "#00dd00" : "#dd0000" )
+					
 					if(validProcess) {
 						
 						// qualidade
 						let res = this.qaInfo.getResult();
 						let qaName = "2_" + res[1];
-						incrementSankeyData(processName, qaName, res[2]);
+						incrementSankeyData(processName, qaName, qtd, res[2]);
 						if(res[0]) {
 						
 							// classificação
 							res = this.classInfo.getResult();
 							let className = "3_" + res[1];
-							incrementSankeyData(qaName, className, res[2]);
+							incrementSankeyData(qaName, className, qtd, res[2]);
 							if(res[0]) {
 
-								// campos
-								let extractName = "4_" + this.extractInfo.infoName;
-								incrementSankeyData(className, extractName, "#dddddd");
-								
-								// extração
-								res = this.extractInfo.getResult();
-								incrementSankeyData(extractName, "5_" + res[1], res[2]);
+								this.extractInfo.forEach(d => {
+									// campos
+									let extractName = "4_" + d.infoName;
+									incrementSankeyData(className, extractName, 1, "#dddddd");
+									
+									// extração
+									res = d.getResult();
+									incrementSankeyData(extractName, "5_" + res[1], 1, res[2]);
+								});
 							}
 						}
 					}
@@ -190,7 +188,7 @@
 			let dataset = undefined;
 			let width = 1000;
 			let height = 800;
-			var margin = {top: 10, right: 20, bottom: 10, left: 10};
+			var margin = {top: 5, right: 25, bottom: 5, left: 5};
 			
 			var svg = d3.select("body").append("svg")
 				.attr("width", width + margin.left + margin.right)
@@ -206,7 +204,7 @@
 				
 			var textsGroup = svg.append("g")
 					.attr("font-family", "sans-serif")
-					.attr("font-size", 10);
+					.attr("font-size", 14);
 					
 			var sankey = d3.sankey()
 				.nodeId(d => d.name)
@@ -230,29 +228,15 @@
 						let qaInfo = new QualityInfo(element);
 						let classInfo = new ClassificationInfo(element);
 					
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("expeditionDate", element.expeditionDateSim, element.expeditionDateSim)));
-						
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("birthdate", element.birthdateSim, element.birthdateConf)));
-							
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("filiationA", element.filiationASim, element.filiationAConf)));
-							
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("filiationB", element.filiationBSim, element.filiationBConf)));
-							
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("birthplace", element.birthplaceSim, element.birthplaceConf)));
-							
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("name", element.nameSim, element.nameConf)));
-							
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("cpf", element.cpfSim, element.cpfConf)));
-						
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
-							new ExtractionInfo("rg", element.rgSim, element.rgConf)));
+						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo, [
+							new ExtractionInfo("expeditionDate", element.expeditionDateSim, element.expeditionDateSim),
+							new ExtractionInfo("birthdate", element.birthdateSim, element.birthdateConf),
+							new ExtractionInfo("filiationA", element.filiationASim, element.filiationAConf),
+							new ExtractionInfo("filiationB", element.filiationBSim, element.filiationBConf),
+							new ExtractionInfo("birthplace", element.birthplaceSim, element.birthplaceConf),
+							new ExtractionInfo("name", element.nameSim, element.nameConf),
+							new ExtractionInfo("cpf", element.cpfSim, element.cpfConf),
+							new ExtractionInfo("rg", element.rgSim, element.rgConf)]));
 					});
 					setInterface();
 				});
@@ -324,16 +308,16 @@
 				return +d3.select("#" + name + "Slider").node().value;
 			}
 						
-			function incrementSankeyData(leftName, rightName, colorVal) {
+			function incrementSankeyData(leftName, rightName, qtd, colorVal) {
 				if (!mapNodes.has(leftName)) mapNodes.set(leftName, { name: leftName, color: "#aaaaaa" });
 				if (!mapNodes.has(rightName)) mapNodes.set(rightName, { name: rightName, color: colorVal });
 				
 				let tag = leftName + "_" + rightName;
 				if(!mapLinks.has(tag)) {
-					mapLinks.set(tag, {source: leftName, target: rightName, value: 1});
+					mapLinks.set(tag, {source: leftName, target: rightName, value: qtd});
 				}
 				else {
-					mapLinks.get(tag).value++;
+					mapLinks.get(tag).value += qtd;
 				}
 			}
 			
@@ -412,8 +396,6 @@
 							.attr("dy", "0.35em")
 							.attr("text-anchor", "start" )
 							.text(d => d.name.substring(d.name.indexOf('_') + 1));
-						
-				document.getElementById("demo").innerHTML = fixStr("Resolução (DPI)");
 			}
 			
 			function fixStr(str) {
