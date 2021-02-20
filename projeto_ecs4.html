@@ -30,6 +30,8 @@
 			<option value="1000" />
 		</datalist>
 
+<p id="demo"></p></br>
+
 		<svg id="grafico" width="800" height="800" />
 
 		</br>
@@ -40,41 +42,133 @@
 		let width = 800;
 		let height = 800;
 
+		class QualityInfo {
+			constructor(element) {
+				this.qaDefault = element.qaDefault;
+				this.qaDPI = +element.qaDPI;
+				this.qaDensity = +element.qaDensity;
+				this.qaInclination = +element.qaInclination;
+				this.qaLightness = +element.qaLightness;
+				this.qaShadow = +element.qaShadow;
+				this.qaFocus = +element.qaFocus;
+				this.qaShine = +element.qaShine;
+			}
+			getResult() {
+				if (!(this.qaDefault === "OK")) {
+					return this.qaDefault;
+				}
+				else if (this.qaDPI < getSliderValue("qaDpi")){
+					return "Resolução (DPI)";
+				}
+				else if (100 * this.qaDensity < getSliderValue("qaDensity")){
+					return "Densidade";
+				}
+				else if (this.qaInclination > getSliderValue("qaInclination")){
+					return "Inclinação";
+				}
+				else if (100 * this.qaLightness < getSliderValue("qaLightness")){
+					return "Iluminação";
+				}
+				else if (100 * this.qaShadow < getSliderValue("qaShadow")){
+					return "Sombra";
+				}
+				else if (100 * this.qaFocus < getSliderValue("qaFocus")){
+					return "Foco";
+				}
+				else if (100 * this.qaShine < getSliderValue("qaShine")){
+					return "Brilho";
+				}
+				else {
+					return "OK";
+				}
+			}
+		}
+		class ClassificationInfo {
+			constructor(element) {
+				this.classification = element.classification;
+				this.confidence = +element.classificationConf;
+			}
+			getResult() {
+				if (100 * this.confidence >= getSliderValue("classifConf")){
+					return this.classification;
+				}
+				else {
+					return "Desconhecido";
+				}
+			}
+		}
+		class ExtractionInfo {
+			constructor(infoName, sim, conf) {
+				this.infoName = infoName;
+				this.similarity = +sim;
+				this.confidence = +conf;
+			}
+			getResult() {
+				let realStatus = this.confidence >= getSliderValue(this.infoName + "Sim");
+				let predictedStatus = this.similarity >= getSliderValue(this.infoName + "Conf");
+				
+				if (predictedStatus) {
+					if (realStatus) {
+						return "TP";
+					}
+					else {
+						return "FP";
+					}
+				}
+				else {
+					if (realStatus) {
+						return "FN";
+					}
+					else {
+						return "TN";
+					}
+				}
+			}
+		}
+		
+		class ElementInfo {
+			constructor(procError, qaInfo, classInfo, extractInfo) {
+				this.procError = procError;
+				this.qaInfo = qaInfo;
+				this.classInfo = classInfo;
+				this.extractInfo = extractInfo;
+			}
+		}
+
 		// Lendo Arquivo
 		d3.csv("https://raw.githubusercontent.com/EduardoCintraSimoes/ProjetoVisualizacao/main/dataset.csv")
 		//d3.csv("dataset.csv")
 			.then(function(data){
 				//processar dados
-				dataset = data;
-				//converter dados textuais para numericos
-				dataset.forEach(function(element){
-					//element.processorError = element.processorError;
-					//element.qaDefault = element.qaDefault;
-					element.qaDPI = +element.qaDPI;
-					element.qaDensity = +element.qaDensity;
-					element.qaInclination = +element.qaInclination;
-					element.qaLightness = +element.qaLightness;
-					element.qaShadow = +element.qaShadow;
-					element.qaFocus = +element.qaFocus;
-					element.qaShine = +element.qaShine;
-					//element.classification = element.classification;
-					element.classificationConf = +element.classificationConf;
-					element.expeditionDateSim = +element.expeditionDateSim;
-					element.expeditionDateConf = +element.expeditionDateConf;
-					element.birthdateSim = +element.birthdateSim;
-					element.birthdateConf = +element.birthdateConf;
-					element.filiationASim = +element.filiationASim;
-					element.filiationAConf = +element.filiationAConf;
-					element.filiationBSim = +element.filiationBSim;
-					element.filiationBConf = +element.filiationBConf;
-					element.birthplaceSim = +element.birthplaceSim;
-					element.birthplaceConf = +element.birthplaceConf;
-					element.nameSim = +element.nameSim;
-					element.nameConf = +element.nameConf;
-					element.cpfSim = +element.cpfSim;
-					element.cpfConf = +element.cpfConf;
-					element.rgSim = +element.rgSim;
-					element.rgConf = +element.rgConf;
+				dataset = [];
+
+				data.forEach(function(element){
+					let qaInfo = new QualityInfo(element);
+					let classInfo = new ClassificationInfo(element);
+				
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("expeditionDate", element.expeditionDateSim, element.expeditionDateSim)));
+					
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("birthdate", element.birthdateSim, element.birthdateConf)));
+						
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("filiationA", element.filiationASim, element.filiationAConf)));
+						
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("filiationB", element.filiationBSim, element.filiationBConf)));
+						
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("birthplace", element.birthplaceSim, element.birthplaceConf)));
+						
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("name", element.nameSim, element.nameConf)));
+						
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("cpf", element.cpfSim, element.cpfConf)));
+					
+					dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo,
+						new ExtractionInfo("rg", element.rgSim, element.rgConf)));
 				});
 				setInterface();
 			});
@@ -99,14 +193,14 @@
 			
 			// controles de extração
 			var rowGroup = newGroup.append("tr");
-			setExtractionSlider(rowGroup.append("th"), "expeditionDateConf", "Data de Expedição");
-			setExtractionSlider(rowGroup.append("th"), "birthdateConf", "Data de Nascimento");
-			setExtractionSlider(rowGroup.append("th"), "filiationAConf", "Filiação A");
-			setExtractionSlider(rowGroup.append("th"), "filiationBConf", "Filiação B");
-			setExtractionSlider(rowGroup.append("th"), "birthplaceConf", "Naturalidade");
-			setExtractionSlider(rowGroup.append("th"), "nameConf", "Nome");
-			setExtractionSlider(rowGroup.append("th"), "cpfConf", "CPF");
-			setExtractionSlider(rowGroup.append("th"), "rgConf", "RG");
+			setExtractionSlider(rowGroup.append("th"), "expeditionDate", "Data de Expedição");
+			setExtractionSlider(rowGroup.append("th"), "birthdate", "Data de Nascimento");
+			setExtractionSlider(rowGroup.append("th"), "filiationA", "Filiação A");
+			setExtractionSlider(rowGroup.append("th"), "filiationB", "Filiação B");
+			setExtractionSlider(rowGroup.append("th"), "birthplace", "Naturalidade");
+			setExtractionSlider(rowGroup.append("th"), "name", "Nome");
+			setExtractionSlider(rowGroup.append("th"), "cpf", "CPF");
+			setExtractionSlider(rowGroup.append("th"), "rg", "RG");
 			
 			//	
 			let svg = d3.select("svg");
@@ -140,20 +234,23 @@
 			
 			//evento de mudança do valor do slider
 			d3.select("#" + sliderTag).on("change",function(){
-				let aux = getSlider(name);
+				let aux = getSliderValue(name);
 				d3.select("#" + labelTag).text(aux);
 				drawData();
 			});
 		}
 		
 		// retorna o valor da barra
-		function getSlider(name) {
+		function getSliderValue(name) {
 			return +d3.select("#" + name + "Slider").node().value;
 		}
 		
 		//Desenha gráfico
 		function drawData(){
-				
+			//document.getElementById("demo").innerHTML = JSON.stringify(dataset[0]);
+			document.getElementById("demo").innerHTML = JSON.stringify(dataset[0].qaInfo) + "\n" + dataset[0].qaInfo.getResult();
+			//document.getElementById("demo").innerHTML = JSON.stringify(dataset[0].classInfo) + "\n" + dataset[0].classInfo.getResult();
+			//document.getElementById("demo").innerHTML = JSON.stringify(dataset[0].extractInfo) + "\n" + dataset[0].extractInfo.getResult();				
 		}
 		</script>
 
