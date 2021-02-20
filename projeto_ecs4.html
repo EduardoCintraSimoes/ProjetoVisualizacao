@@ -13,6 +13,20 @@
 	</head>
 	<body>
 	
+		<datalist id="smallTickmarks">
+			<option value="0"/>
+			<option value="1" />
+			<option value="2" />
+			<option value="3" />
+			<option value="4" />
+			<option value="5" />
+			<option value="6" />
+			<option value="7" />
+			<option value="8" />
+			<option value="9" />
+			<option value="10" />
+		</datalist>
+			
 		<datalist id="tickmarks">
 			<option value="0" />
 			<option value="10" />
@@ -94,14 +108,15 @@
 						return [isValid, this.classification, isValid ? "#00dd00" : "#dd0000"];
 					}
 					else {
-						return [false, "Desconhecido", "#dddddd"];
+						return [false, "Desconhecido", "#dddd00"];
 					}
 				}
 			}
 			
 			class ExtractionInfo {
-				constructor(infoName, sim, conf) {
-					this.infoName = infoName;
+				constructor(name, text, sim, conf) {
+					this.name = name;
+					this.text = text;
 					this.similarity = +sim;
 					this.confidence = +conf;
 				}
@@ -111,8 +126,8 @@
 					let nameValue = "";
 					let colorValue =  "#dd0000";
 				
-					let realStatus = this.confidence >= getSliderValue(this.infoName + "Sim");
-					let predictedStatus = this.similarity >= getSliderValue(this.infoName + "Conf");
+					let realStatus = this.confidence >= getSliderValue(this.name + "Sim");
+					let predictedStatus = this.similarity >= getSliderValue(this.name + "Conf");
 					
 					if (predictedStatus) {
 						if (realStatus) {
@@ -131,7 +146,7 @@
 						}
 						else {
 							nameValue = "TN";
-							colorValue = "#dddddd";
+							colorValue = "#2222dd";
 						}
 					}
 					return [isValid, nameValue, colorValue];
@@ -171,7 +186,7 @@
 
 								this.extractInfo.forEach(d => {
 									// campos
-									let extractName = "4_" + d.infoName;
+									let extractName = "4_" + d.text;
 									incrementSankeyData(className, extractName, 1, "#dddddd");
 									
 									// extração
@@ -186,9 +201,9 @@
 			
 //  Variaveis globais  //
 			let dataset = undefined;
-			let width = 1000;
+			let width = 1100;
 			let height = 800;
-			var margin = {top: 5, right: 25, bottom: 5, left: 5};
+			var margin = {top: 5, right: 30, bottom: 5, left: 5};
 			
 			var svg = d3.select("body").append("svg")
 				.attr("width", width + margin.left + margin.right)
@@ -204,6 +219,10 @@
 				
 			var textsGroup = svg.append("g")
 					.attr("font-family", "sans-serif")
+					.attr("font-weight", "bold")
+					.attr("stroke", "white")
+					.attr("paint-order", "stroke")
+					.attr("stroke-width", "2px")
 					.attr("font-size", 14);
 					
 			var sankey = d3.sankey()
@@ -229,14 +248,14 @@
 						let classInfo = new ClassificationInfo(element);
 					
 						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo, [
-							new ExtractionInfo("expeditionDate", element.expeditionDateSim, element.expeditionDateSim),
-							new ExtractionInfo("birthdate", element.birthdateSim, element.birthdateConf),
-							new ExtractionInfo("filiationA", element.filiationASim, element.filiationAConf),
-							new ExtractionInfo("filiationB", element.filiationBSim, element.filiationBConf),
-							new ExtractionInfo("birthplace", element.birthplaceSim, element.birthplaceConf),
-							new ExtractionInfo("name", element.nameSim, element.nameConf),
-							new ExtractionInfo("cpf", element.cpfSim, element.cpfConf),
-							new ExtractionInfo("rg", element.rgSim, element.rgConf)]));
+							new ExtractionInfo("expeditionDate", "Data de Expedição", element.expeditionDateSim, element.expeditionDateSim),
+							new ExtractionInfo("birthdate", "Data de Nascimento", element.birthdateSim, element.birthdateConf),
+							new ExtractionInfo("filiationA", "Filiação A", element.filiationASim, element.filiationAConf),
+							new ExtractionInfo("filiationB", "Filiação B", element.filiationBSim, element.filiationBConf),
+							new ExtractionInfo("birthplace", "Naturalidade", element.birthplaceSim, element.birthplaceConf),
+							new ExtractionInfo("name", "Nome", element.nameSim, element.nameConf),
+							new ExtractionInfo("cpf", "CPF", element.cpfSim, element.cpfConf),
+							new ExtractionInfo("rg", "Registro Geral", element.rgSim, element.rgConf)]));
 					});
 					setInterface();
 				});
@@ -251,7 +270,7 @@
 				var rowGroup = newGroup.append("tr");
 				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 400, 200);
 				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 50, 5, 0.1);
-				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 40, 2, 0.1);
+				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 10, 2, 0.1);
 				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaShadow", "Sombra", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaFocus", "Foco", 0, 100, 60);
@@ -292,8 +311,14 @@
 				newGroup.append("br");
 				
 				// barra
-				newGroup.append("input").attr("id", sliderTag).attr("type", "range").attr("step",step)
-					.attr("min", minVal).attr("max", maxVal).attr("value", defaultVal).attr("list","tickmarks");
+				newGroup.append("input")
+					.attr("id", sliderTag)
+					.attr("type", "range")
+					.attr("step", step)
+					.attr("min", minVal)
+					.attr("max", maxVal)
+					.attr("value", defaultVal)
+					.attr("list", maxVal > 10 ? "tickmarks" : "smallTickmarks");
 				
 				//evento de mudança do valor do slider
 				d3.select("#" + sliderTag).on("change",function(){
@@ -321,11 +346,13 @@
 				}
 			}
 			
-			function darkenColor(color, amount) {
-				const [r, g, b] = color.match(/\w\w/g).map((c) => parseInt(c, 16));
-				const nR = Math.round(r * amount).toString(16).padStart(2, '0');
-				const nG = Math.round(g * amount).toString(16).padStart(2, '0');
-				const nB = Math.round(b * amount).toString(16).padStart(2, '0');
+			function blendColor(colorA, colorB, amount) {
+				let invAmount = 1 - amount;
+				const [rA, gA, bA] = colorA.match(/\w\w/g).map((c) => parseInt(c, 16));
+				const [rB, gB, bB] = colorB.match(/\w\w/g).map((c) => parseInt(c, 16));
+				const nR = Math.round(rA * amount + rB * invAmount).toString(16).padStart(2, '0');
+				const nG = Math.round(gA * amount + gB * invAmount).toString(16).padStart(2, '0');
+				const nB = Math.round(bA * amount + bB * invAmount).toString(16).padStart(2, '0');
 				return '#' + nR + nG + nB;
 			}
 			
@@ -375,11 +402,13 @@
 
 				gradient.append("stop")
 					.attr("offset", "0%")
-					.attr("stop-color", d => darkenColor(d.target.color, 0.5));//d.source.color);
+					//.attr("stop-color", d => blendColor(d.target.color, "#ffffff", 0.5));
+					.attr("stop-color", d => d.target.color);
 
 				gradient.append("stop")
 					.attr("offset", "100%")
-					.attr("stop-color", d => d.target.color);
+					//.attr("stop-color", d => d.target.color);
+					.attr("stop-color", d => blendColor(d.target.color, "#ffffff", 0.5));
 					
 				link.selectAll("path").remove(); // remove linhas antigas		
 				link.append("path")
@@ -391,7 +420,7 @@
 					.selectAll("text")
 					.data(graph.nodes)
 						.join("text")
-							.attr("x", d => d.x1 + 6)
+							.attr("x", d => d.x1 + 10)
 							.attr("y", d => (d.y1 + d.y0) / 2)
 							.attr("dy", "0.35em")
 							.attr("text-anchor", "start" )
