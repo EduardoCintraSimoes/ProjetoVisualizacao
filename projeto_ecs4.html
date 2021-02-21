@@ -247,15 +247,15 @@
 						let qaInfo = new QualityInfo(element);
 						let classInfo = new ClassificationInfo(element);
 					
-						dataset.push(new ElementInfo(element.processorError, qaInfo, classInfo, [
-							new ExtractionInfo("expeditionDate", "Data de Expedição", element.expeditionDateSim, element.expeditionDateSim),
-							new ExtractionInfo("birthdate", "Data de Nascimento", element.birthdateSim, element.birthdateConf),
-							new ExtractionInfo("filiationA", "Filiação A", element.filiationASim, element.filiationAConf),
-							new ExtractionInfo("filiationB", "Filiação B", element.filiationBSim, element.filiationBConf),
-							new ExtractionInfo("birthplace", "Naturalidade", element.birthplaceSim, element.birthplaceConf),
-							new ExtractionInfo("name", "Nome", element.nameSim, element.nameConf),
-							new ExtractionInfo("cpf", "CPF", element.cpfSim, element.cpfConf),
-							new ExtractionInfo("rg", "Registro Geral", element.rgSim, element.rgConf)]));
+						dataset.push(new ElementInfo(element.processError, qaInfo, classInfo, [
+							new ExtractionInfo("DATA_EXPEDICAO", "Data de Expedição", element.DATA_EXPEDICAOSim, element.DATA_EXPEDICAOSim),
+							new ExtractionInfo("DATA_NASCIMENTO", "Data de Nascimento", element.DATA_NASCIMENTOSim, element.DATA_NASCIMENTOConf),
+							new ExtractionInfo("FILIACAO_A", "Filiação A", element.FILIACAO_ASim, element.FILIACAO_AConf),
+							new ExtractionInfo("FILIACAO_B", "Filiação B", element.FILIACAO_BSim, element.FILIACAO_BConf),
+							new ExtractionInfo("NATURALIDADE", "Naturalidade", element.NATURALIDADESim, element.NATURALIDADEConf),
+							new ExtractionInfo("NOME", "Nome", element.NOMESim, element.NOMEConf),
+							new ExtractionInfo("NUM_CPF", "CPF", element.NUM_CPFSim, element.NUM_CPFConf),
+							new ExtractionInfo("NUM_RG", "Registro Geral", element.NUM_RGSim, element.NUM_RGConf)]));
 					});
 					setInterface();
 				});
@@ -274,21 +274,21 @@
 				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaShadow", "Sombra", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaFocus", "Foco", 0, 100, 60);
-				setSlider(rowGroup.append("th"), "qaShine", "Brilho", 0, 100, 60);
+				setSlider(rowGroup.append("th"), "qaShine", "Brilho", 0, 100, 0);
 				
 				// controles de classificação
 				setSlider(rowGroup.append("th"), "classifConf", "Classificação", 0, 100, 30);
 				
 				// controles de extração
 				var rowGroup = newGroup.append("tr");
-				setExtractionSlider(rowGroup.append("th"), "expeditionDate", "Data de Expedição");
-				setExtractionSlider(rowGroup.append("th"), "birthdate", "Data de Nascimento");
-				setExtractionSlider(rowGroup.append("th"), "filiationA", "Filiação A");
-				setExtractionSlider(rowGroup.append("th"), "filiationB", "Filiação B");
-				setExtractionSlider(rowGroup.append("th"), "birthplace", "Naturalidade");
-				setExtractionSlider(rowGroup.append("th"), "name", "Nome");
-				setExtractionSlider(rowGroup.append("th"), "cpf", "CPF");
-				setExtractionSlider(rowGroup.append("th"), "rg", "RG");
+				setExtractionSlider(rowGroup.append("th"), "DATA_EXPEDICAO", "Data de Expedição");
+				setExtractionSlider(rowGroup.append("th"), "DATA_NASCIMENTO", "Data de Nascimento");
+				setExtractionSlider(rowGroup.append("th"), "FILIACAO_A", "Filiação A");
+				setExtractionSlider(rowGroup.append("th"), "FILIACAO_B", "Filiação B");
+				setExtractionSlider(rowGroup.append("th"), "NATURALIDADE", "Naturalidade");
+				setExtractionSlider(rowGroup.append("th"), "NOME", "Nome");
+				setExtractionSlider(rowGroup.append("th"), "NUM_CPF", "CPF");
+				setExtractionSlider(rowGroup.append("th"), "NUM_RG", "RG");
 				
 				drawData();
 			}

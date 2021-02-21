@@ -1,4 +1,4 @@
-processorError,qaDefault,qaDPI,qaDensity,qaInclination,qaLightness,qaShadow,qaFocus,qaShine,classification,classificationConf,expeditionDateSim,expeditionDateConf,birthdateSim,birthdateConf,filiationASim,filiationAConf,filiationBSim,filiationBConf,birthplaceSim,birthplaceConf,nameSim,nameConf,cpfSim,cpfConf,rgSim,rgConf
+processError,qaDefault,qaDPI,qaDensity,qaInclination,qaLightness,qaShadow,qaFocus,qaShine,classification,classificationConf,DATA_EXPEDICAOSim,DATA_EXPEDICAOConf,DATA_NASCIMENTOSim,DATA_NASCIMENTOConf,FILIACAO_ASim,FILIACAO_AConf,FILIACAO_BSim,FILIACAO_BConf,NATURALIDADESim,NATURALIDADEConf,NOMESim,NOMEConf,NUM_CPFSim,NUM_CPFConf,NUM_RGSim,NUM_RGConf
 0,OK,200,0.151531,0.1,1,1,1,1,rg_back,0.593669,63,74,100,93,24,97,24,94,100,92,87,96,0,0,100,95
 0,OK,200,0.140937,0.3,1,1,1,1,rg_back,0.475228,50,89,100,94,8,59,96,97,100,96,100,97,100,0,100,92
 0,Profundidade de cor,200,0.15974,0.2,-1,-1,-1,-1,rg_back,0.622671,63,70,100,87,23,76,23,91,100,92,100,94,0,0,100,86
