@@ -58,12 +58,13 @@
 					this.qaShine = +element.qaShine;
 				}
 				getResult() {
-					let isValid = false;
+					let order = 1;
 					let nameValue = "";
 					let colorValue = "#dd0000";
 					
 					if (!(this.qaDefault === "OK")) {
 						nameValue = this.qaDefault;
+						order = 2;
 						colorValue = "#dddddd";
 					}
 					else if (this.qaDPI < getSliderValue("qaDpi")){
@@ -88,12 +89,12 @@
 						nameValue = "Brilho";
 					}
 					else {
-						isValid = true;
+						order = 0;
 						nameValue = "OK";
 						colorValue = "#00dd00";
 					}
 					
-					return [isValid, nameValue, colorValue];
+					return [order, nameValue, colorValue];
 				}
 			}
 			
@@ -105,10 +106,10 @@
 				getResult() {
 					if (100 * this.confidence >= getSliderValue("classifConf")){
 						let isValid = this.classification === "rg_back";
-						return [isValid, this.classification, isValid ? "#00dd00" : "#dd0000"];
+						return [isValid ? 0 : 1, this.classification, isValid ? "#00dd00" : "#dd0000"];
 					}
 					else {
-						return [false, "Desconhecido", "#dddd00"];
+						return [2, "Desconhecido", "#dddd00"];
 					}
 				}
 			}
@@ -122,9 +123,9 @@
 				}
 				getResult() {
 				
-					let isValid = false;
-					let nameValue = "";
-					let colorValue =  "#dd0000";
+					let order = undefined;
+					let nameValue = undefined;
+					let colorValue =  undefined;
 				
 					let realStatus = this.confidence >= getSliderValue(this.name + "Sim");
 					let predictedStatus = this.similarity >= getSliderValue(this.name + "Conf");
@@ -133,23 +134,27 @@
 						if (realStatus) {
 							nameValue = "TP";
 							colorValue = "#00dd00";
-							isValid = true;
+							order = 0;
 						}
 						else {
 							nameValue = "FP";
+							colorValue =  "#dd0000";
+							order = 3;
 						}
 					}
 					else {
 						if (realStatus) {
 							nameValue = "FN";
 							colorValue = "#dddd00";
+							order = 2;
 						}
 						else {
 							nameValue = "TN";
 							colorValue = "#2222dd";
+							order = 1;
 						}
 					}
-					return [isValid, nameValue, colorValue];
+					return [order, nameValue, colorValue];
 				}
 			}
 			
@@ -168,30 +173,30 @@
 					let processName = this.procError == 1 ? "1_Error" : "1_OK";
 					let validProcess = processName === "1_OK";
 					
-					incrementSankeyData("0_Base", processName, qtd, validProcess ? "#00dd00" : "#dd0000" )
+					incrementSankeyData("0_Base", processName, qtd, validProcess ? 0 : 1, validProcess ? "#00dd00" : "#dd0000" )
 					
 					if(validProcess) {
 						
 						// qualidade
 						let res = this.qaInfo.getResult();
 						let qaName = "2_" + res[1];
-						incrementSankeyData(processName, qaName, qtd, res[2]);
-						if(res[0]) {
+						incrementSankeyData(processName, qaName, qtd, res[0], res[2]);
+						if(res[0] == 0) {
 						
 							// classificação
 							res = this.classInfo.getResult();
 							let className = "3_" + res[1];
-							incrementSankeyData(qaName, className, qtd, res[2]);
-							if(res[0]) {
+							incrementSankeyData(qaName, className, qtd, res[0], res[2]);
+							if(res[0] == 0) {
 
 								this.extractInfo.forEach(d => {
 									// campos
 									let extractName = "4_" + d.text;
-									incrementSankeyData(className, extractName, 1, "#dddddd");
+									incrementSankeyData(className, extractName, 1, 0, "#dddddd");
 									
 									// extração
 									res = d.getResult();
-									incrementSankeyData(extractName, "5_" + res[1], 1, res[2]);
+									incrementSankeyData(extractName, "5_" + res[1], 1, res[0], res[2]);
 								});
 							}
 						}
@@ -230,6 +235,8 @@
 				.nodeWidth(15)
 				.nodePadding(20)
 				.nodeAlign(d3.sankeyLeft)
+				.nodeSort(orderNodes)
+				.linkSort(orderLinks)
 				.extent([[1, 5], [width - 1, height - 5]]);
 			
 			var mapNodes = undefined;
@@ -269,8 +276,8 @@
 				// controles de qualidade
 				var rowGroup = newGroup.append("tr");
 				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 400, 200);
-				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 50, 5, 0.1);
-				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 10, 2, 0.1);
+				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 40, 5, 0.1);
+				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 5, 2, 0.1);
 				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaShadow", "Sombra", 0, 100, 60);
 				setSlider(rowGroup.append("th"), "qaFocus", "Foco", 0, 100, 60);
@@ -333,9 +340,9 @@
 				return +d3.select("#" + name + "Slider").node().value;
 			}
 						
-			function incrementSankeyData(leftName, rightName, qtd, colorVal) {
-				if (!mapNodes.has(leftName)) mapNodes.set(leftName, { name: leftName, color: "#aaaaaa" });
-				if (!mapNodes.has(rightName)) mapNodes.set(rightName, { name: rightName, color: colorVal });
+			function incrementSankeyData(leftName, rightName, qtd, orderLvl, colorVal) {
+				if (!mapNodes.has(leftName)) mapNodes.set(leftName, { name: leftName, color: "#aaaaaa", order: 0 });
+				if (!mapNodes.has(rightName)) mapNodes.set(rightName, { name: rightName, color: colorVal, order: orderLvl });
 				
 				let tag = leftName + "_" + rightName;
 				if(!mapLinks.has(tag)) {
@@ -354,6 +361,27 @@
 				const nG = Math.round(gA * amount + gB * invAmount).toString(16).padStart(2, '0');
 				const nB = Math.round(bA * amount + bB * invAmount).toString(16).padStart(2, '0');
 				return '#' + nR + nG + nB;
+			}
+			
+			function orderNodes(nA, nB) {
+				if(nA.order < nB.order) {
+					return -1;
+				}
+				else if(nA.order > nB.order) {
+					return 1;
+				}
+				else{
+					return (nA.name < nB.name) ? -1 : ( (nA.name > nB.name) ? 1 : 0 );
+				}
+			}
+			
+			function orderLinks(lA, lB) {
+				let order = orderNodes(lA.target, lB.target);
+				if(order == 0)
+				{
+					order = orderNodes(lA.source, lB.source);
+				}
+				return order;
 			}
 			
 			//Desenha gráfico
