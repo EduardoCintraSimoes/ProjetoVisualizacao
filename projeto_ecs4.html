@@ -192,7 +192,7 @@
 								this.extractInfo.forEach(d => {
 									// campos
 									let extractName = "4_" + d.text;
-									incrementSankeyData(className, extractName, 1, 0, "#dddddd");
+									incrementSankeyData(className, extractName, 1, 0, "#aaaaaa");
 									
 									// extração
 									res = d.getResult();
@@ -207,7 +207,7 @@
 //  Variaveis globais  //
 			let dataset = undefined;
 			let width = 1100;
-			let height = 800;
+			let height = 750;
 			var margin = {top: 5, right: 30, bottom: 5, left: 5};
 			
 			var svg = d3.select("body").append("svg")
