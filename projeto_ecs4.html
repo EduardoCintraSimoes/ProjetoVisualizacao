@@ -3,13 +3,16 @@
 		<meta charset="utf-8">
 		<title>Projeto ecs4</title>
 		
-		<script src="https://d3js.org/d3.v5.min.js" />x
+		<script src="https://d3js.org/d3.v6.min.js"></script>
 		
 		<script src="https://unpkg.com/d3-array@1"></script>
 		<script src="https://unpkg.com/d3-collection@1"></script>
 		<script src="https://unpkg.com/d3-path@1"></script>
 		<script src="https://unpkg.com/d3-shape@1"></script>
 		<script src="https://unpkg.com/d3-sankey@0"></script>
+		
+		<script src="databaseInfo.js"></script>
+		<script src="slider.js"></script>
 	</head>
 	<body>
 	
@@ -45,164 +48,6 @@
 		</datalist>
 
 		<script>
-//  Classes  //
-			class QualityInfo {
-				constructor(element) {
-					this.qaDefault = element.qaDefault;
-					this.qaDPI = +element.qaDPI;
-					this.qaDensity = +element.qaDensity;
-					this.qaInclination = +element.qaInclination;
-					this.qaLightness = +element.qaLightness;
-					this.qaShadow = +element.qaShadow;
-					this.qaFocus = +element.qaFocus;
-					this.qaShine = +element.qaShine;
-				}
-				getResult() {
-					let order = 1;
-					let nameValue = "";
-					let colorValue = "#dd0000";
-					
-					if (!(this.qaDefault === "OK")) {
-						nameValue = this.qaDefault;
-						order = 2;
-						colorValue = "#dddddd";
-					}
-					else if (this.qaDPI < getSliderValue("qaDpi")){
-						nameValue = "Resolução (DPI)";
-					}
-					else if (100 * this.qaDensity < getSliderValue("qaDensity")){
-						nameValue = "Densidade";
-					}
-					else if (this.qaInclination > getSliderValue("qaInclination")){
-						nameValue = "Inclinação";
-					}
-					else if (100 * this.qaLightness < getSliderValue("qaLightness")){
-						nameValue = "Iluminação";
-					}
-					else if (100 * this.qaShadow < getSliderValue("qaShadow")){
-						nameValue = "Sombra";
-					}
-					else if (100 * this.qaFocus < getSliderValue("qaFocus")){
-						nameValue = "Foco";
-					}
-					else if (100 * this.qaShine < getSliderValue("qaShine")){
-						nameValue = "Brilho";
-					}
-					else {
-						order = 0;
-						nameValue = "OK";
-						colorValue = "#00dd00";
-					}
-					
-					return [order, nameValue, colorValue];
-				}
-			}
-			
-			class ClassificationInfo {
-				constructor(element) {
-					this.classification = element.classification;
-					this.confidence = +element.classificationConf;
-				}
-				getResult() {
-					if (100 * this.confidence >= getSliderValue("classifConf")){
-						let isValid = this.classification === "rg_back";
-						return [isValid ? 0 : 1, this.classification, isValid ? "#00dd00" : "#dd0000"];
-					}
-					else {
-						return [2, "Desconhecido", "#dddd00"];
-					}
-				}
-			}
-			
-			class ExtractionInfo {
-				constructor(name, text, sim, conf) {
-					this.name = name;
-					this.text = text;
-					this.similarity = +sim;
-					this.confidence = +conf;
-				}
-				getResult() {
-				
-					let order = undefined;
-					let nameValue = undefined;
-					let colorValue =  undefined;
-				
-					let realStatus = this.confidence >= getSliderValue(this.name + "Sim");
-					let predictedStatus = this.similarity >= getSliderValue(this.name + "Conf");
-					
-					if (predictedStatus) {
-						if (realStatus) {
-							nameValue = "TP";
-							colorValue = "#00dd00";
-							order = 0;
-						}
-						else {
-							nameValue = "FP";
-							colorValue =  "#dd0000";
-							order = 3;
-						}
-					}
-					else {
-						if (realStatus) {
-							nameValue = "FN";
-							colorValue = "#dddd00";
-							order = 2;
-						}
-						else {
-							nameValue = "TN";
-							colorValue = "#2222dd";
-							order = 1;
-						}
-					}
-					return [order, nameValue, colorValue];
-				}
-			}
-			
-			class ElementInfo {
-				constructor(procError, qaInfo, classInfo, extractInfo) {
-					this.procError = +procError;
-					this.qaInfo = qaInfo;
-					this.classInfo = classInfo;
-					this.extractInfo = extractInfo;
-				}
-				
-				updateMap() {
-					let qtd = this.extractInfo.length;
-				
-					// preprocessamento
-					let processName = this.procError == 1 ? "1_Error" : "1_OK";
-					let validProcess = processName === "1_OK";
-					
-					incrementSankeyData("0_Base", processName, qtd, validProcess ? 0 : 1, validProcess ? "#00dd00" : "#dd0000" )
-					
-					if(validProcess) {
-						
-						// qualidade
-						let res = this.qaInfo.getResult();
-						let qaName = "2_" + res[1];
-						incrementSankeyData(processName, qaName, qtd, res[0], res[2]);
-						if(res[0] == 0) {
-						
-							// classificação
-							res = this.classInfo.getResult();
-							let className = "3_" + res[1];
-							incrementSankeyData(qaName, className, qtd, res[0], res[2]);
-							if(res[0] == 0) {
-
-								this.extractInfo.forEach(d => {
-									// campos
-									let extractName = "4_" + d.text;
-									incrementSankeyData(className, extractName, 1, 0, "#aaaaaa");
-									
-									// extração
-									res = d.getResult();
-									incrementSankeyData(extractName, "5_" + res[1], 1, res[0], res[2]);
-								});
-							}
-						}
-					}
-				}
-			}
 			
 //  Variaveis globais  //
 			let dataset = undefined;
@@ -210,6 +55,8 @@
 			let height = 750;
 			var margin = {top: 5, right: 30, bottom: 5, left: 5};
 			
+			var histograms = new Map();
+	
 			var svg = d3.select("body").append("svg")
 				.attr("width", width + margin.left + margin.right)
 				.attr("height", height + margin.top + margin.bottom)
@@ -245,25 +92,8 @@
 //  Dados  //
 			// Lendo Arquivo
 			d3.csv("https://raw.githubusercontent.com/EduardoCintraSimoes/ProjetoVisualizacao/main/dataset.csv")
-			//d3.csv("dataset.csv")
 				.then(function(data){
-					//processar dados
-					dataset = [];
-
-					data.forEach(function(element){
-						let qaInfo = new QualityInfo(element);
-						let classInfo = new ClassificationInfo(element);
-					
-						dataset.push(new ElementInfo(element.processError, qaInfo, classInfo, [
-							new ExtractionInfo("DATA_EXPEDICAO", "Data de Expedição", element.DATA_EXPEDICAOSim, element.DATA_EXPEDICAOSim),
-							new ExtractionInfo("DATA_NASCIMENTO", "Data de Nascimento", element.DATA_NASCIMENTOSim, element.DATA_NASCIMENTOConf),
-							new ExtractionInfo("FILIACAO_A", "Filiação A", element.FILIACAO_ASim, element.FILIACAO_AConf),
-							new ExtractionInfo("FILIACAO_B", "Filiação B", element.FILIACAO_BSim, element.FILIACAO_BConf),
-							new ExtractionInfo("NATURALIDADE", "Naturalidade", element.NATURALIDADESim, element.NATURALIDADEConf),
-							new ExtractionInfo("NOME", "Nome", element.NOMESim, element.NOMEConf),
-							new ExtractionInfo("NUM_CPF", "CPF", element.NUM_CPFSim, element.NUM_CPFConf),
-							new ExtractionInfo("NUM_RG", "Registro Geral", element.NUM_RGSim, element.NUM_RGConf)]));
-					});
+					dataset = loadDataset(data);
 					setInterface();
 				});
 
@@ -274,17 +104,18 @@
 				var newGroup = d3.select("body").append("table").attr("border",1);//.append("g");
 			
 				// controles de qualidade
+				var qaColor = "#00d060";
 				var rowGroup = newGroup.append("tr");
-				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 400, 200);
-				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 40, 5, 0.1);
-				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 5, 2, 0.1);
-				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60);
-				setSlider(rowGroup.append("th"), "qaShadow", "Sombra", 0, 100, 60);
-				setSlider(rowGroup.append("th"), "qaFocus", "Foco", 0, 100, 60);
-				setSlider(rowGroup.append("th"), "qaShine", "Brilho", 0, 100, 0);
+				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 400, 200, 1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 40, 5, 0.1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 5, 2, 0.1, true, qaColor);
+				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60, 1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaShadow", "Sombra", 0, 100, 60, 1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaFocus", "Foco", 0, 100, 60, 1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaShine", "Brilho", 0, 100, 0, 1, false, qaColor);
 				
 				// controles de classificação
-				setSlider(rowGroup.append("th"), "classifConf", "Classificação", 0, 100, 30);
+				setSlider(rowGroup.append("th"), "classifConf", "Classificação", 0, 100, 30, 1, false, "#ed9000");
 				
 				// controles de extração
 				var rowGroup = newGroup.append("tr");
@@ -300,59 +131,6 @@
 				drawData();
 			}
 
-			function setExtractionSlider(newGroup, name, text) {
-				newGroup.text(text); // título
-				newGroup.append("br");
-				setSlider( newGroup, name + "Conf", "Confiança", 0, 100, 70); // confiança
-				newGroup.append("br");
-				setSlider( newGroup, name + "Sim", "Similaridade", 0, 100, 90); // similaridade
-			}
-
-			function setSlider(newGroup, name, text, minVal, maxVal, defaultVal, step = 1) {
-				var sliderTag = name + "Slider";
-				var labelTag = name + "Label";
-				
-				// texto
-				newGroup.append("label").text(text + ": ");
-				newGroup.append("label").attr("id", labelTag).text(defaultVal);
-				newGroup.append("br");
-				
-				// barra
-				newGroup.append("input")
-					.attr("id", sliderTag)
-					.attr("type", "range")
-					.attr("step", step)
-					.attr("min", minVal)
-					.attr("max", maxVal)
-					.attr("value", defaultVal)
-					.attr("list", maxVal > 10 ? "tickmarks" : "smallTickmarks");
-				
-				//evento de mudança do valor do slider
-				d3.select("#" + sliderTag).on("change",function(){
-					let aux = getSliderValue(name);
-					d3.select("#" + labelTag).text(aux);
-					drawData();
-				});
-			}
-			
-			// retorna o valor da barra
-			function getSliderValue(name) {
-				return +d3.select("#" + name + "Slider").node().value;
-			}
-						
-			function incrementSankeyData(leftName, rightName, qtd, orderLvl, colorVal) {
-				if (!mapNodes.has(leftName)) mapNodes.set(leftName, { name: leftName, color: "#aaaaaa", order: 0 });
-				if (!mapNodes.has(rightName)) mapNodes.set(rightName, { name: rightName, color: colorVal, order: orderLvl });
-				
-				let tag = leftName + "_" + rightName;
-				if(!mapLinks.has(tag)) {
-					mapLinks.set(tag, {source: leftName, target: rightName, value: qtd});
-				}
-				else {
-					mapLinks.get(tag).value += qtd;
-				}
-			}
-			
 			function blendColor(colorA, colorB, amount) {
 				let invAmount = 1 - amount;
 				const [rA, gA, bA] = colorA.match(/\w\w/g).map((c) => parseInt(c, 16));
