@@ -13,6 +13,7 @@
 		
 		<script src="databaseInfo.js"></script>
 		<script src="slider.js"></script>
+		<script src="tooltip.js"></script>
 	</head>
 	<body>
 	
@@ -70,13 +71,15 @@
 				.attr("stroke-opacity", 0.5);
 				
 			var textsGroup = svg.append("g")
-					.attr("font-family", "sans-serif")
-					.attr("font-weight", "bold")
-					.attr("stroke", "white")
-					.attr("paint-order", "stroke")
-					.attr("stroke-width", "2px")
-					.attr("font-size", 14);
-					
+				.attr("font-family", "sans-serif")
+				.attr("font-weight", "bold")
+				.attr("stroke", "white")
+				.attr("paint-order", "stroke")
+				.attr("stroke-width", "2px")
+				.attr("font-size", 14);
+			
+			createToolTip();
+			
 			var sankey = d3.sankey()
 				.nodeId(d => d.name)
 				.nodeWidth(15)
@@ -106,7 +109,7 @@
 				// controles de qualidade
 				var qaColor = "#00d060";
 				var rowGroup = newGroup.append("tr");
-				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 400, 200, 1, false, qaColor);
+				setSlider(rowGroup.append("th"), "qaDpi", "DPI", 100, 350, 200, 1, false, qaColor);
 				setSlider(rowGroup.append("th"), "qaDensity", "Densidade", 0, 40, 5, 0.1, false, qaColor);
 				setSlider(rowGroup.append("th"), "qaInclination", "Inclinação", 0, 5, 2, 0.1, true, qaColor);
 				setSlider(rowGroup.append("th"), "qaLightness", "Iluminação", 0, 100, 60, 1, false, qaColor);
@@ -186,10 +189,13 @@
 						.data(graph.nodes)
 							.join("rect")
 								.attr("x", d => d.x0)
+								.attr("x", d => d.x0)
 								.attr("y", d => d.y0)
 								.attr("height", d => d.y1 - d.y0)
 								.attr("width", d => d.x1 - d.x0)
 								.attr("fill", d => d.color)
+								.on('mouseover', (d, i) => showToolTip(d, i))
+								.on('mouseout', hideToolTip)
 								.append("title")
 									.text(d => d.name);
 				
@@ -230,7 +236,11 @@
 							.attr("y", d => (d.y1 + d.y0) / 2)
 							.attr("dy", "0.35em")
 							.attr("text-anchor", "start" )
-							.text(d => d.name.substring(d.name.indexOf('_') + 1));
+							.text(d => getName(d));
+			}
+			
+			function getName(d) {
+				return d.name.substring(d.name.indexOf('_') + 1);
 			}
 			
 			function fixStr(str) {

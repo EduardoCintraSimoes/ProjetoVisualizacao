@@ -139,6 +139,8 @@ class ElementInfo {
 		
 		incrementSankeyData("0_Base", processName, qtd, validProcess ? 0 : 1, validProcess ? "#00dd00" : "#dd0000" )
 		
+		mapNodes.get("0_Base").qtd += qtd;
+		
 		if(validProcess) {
 			
 			// qualidade
@@ -186,6 +188,22 @@ function loadDataset(data) {
 			new ExtractionInfo("NUM_RG", "Registro Geral", element.NUM_RGSim, element.NUM_RGConf)]));
 	});
 	return dataset;
+}
+
+function incrementSankeyData(leftName, rightName, qtd, orderLvl, colorVal) {
+	if (!mapNodes.has(leftName)) mapNodes.set(leftName, { name: leftName, color: "#aaaaaa", order: 0, qtd: 0, qtd: 0  });
+	if (!mapNodes.has(rightName)) mapNodes.set(rightName, { name: rightName, color: colorVal, order: orderLvl, qtd: 0 });
+	
+	// incrementa quantidade de elementos entrando
+	mapNodes.get(rightName).qtd += qtd;
+	
+	let tag = leftName + "_" + rightName;
+	if(!mapLinks.has(tag)) {
+		mapLinks.set(tag, {source: leftName, target: rightName, value: qtd});
+	}
+	else {
+		mapLinks.get(tag).value += qtd;
+	}
 }
 
 function incrementHistogram(name, value) {
