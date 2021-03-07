@@ -2,39 +2,69 @@
 // mapa dos valores para otimizar o getSliderValue
 var slidersValues = new Map();
 
-function setExtractionSlider(newGroup, name, text) {
-	newGroup.text(text); // título
-	newGroup.append("br");
-	setSlider( newGroup, name + "Conf", "Confiança", 0, 100, 70); // confiança
-	newGroup.append("br");
-	setSlider( newGroup, name + "Sim", "Similaridade", 0, 100, 90); // similaridade
+function setExtractionSlider(posX, posY, name, text, color) {
+	
+	var titleTxt = svg.append("text")
+			.attr("text-anchor", "middle")
+			.attr("alignment-baseline", "before-edge")
+			.attr("x", (posX + 1) * controlBox.width)
+			.attr("y", posY * controlBox.height + 2)
+				.attr("font-weight", "bold")
+			.text("Extração de " + text);
+	
+	drawRectangle(posX, posY, 2, 1);
+	
+	setSlider( posX, posY, name + "Conf", "Confiança", 0, 100, 70, 1, false, color, 14); // confiança
+	setSlider( posX + 1, posY, name + "Sim", "Similaridade", 0, 100, 90, 1, false, color, 14); // similaridade
 }
 
-function setSlider(newGroup, name, text, minVal, maxVal, defaultVal, step = 1, invHist = false, color = "#0074ff") {
+function setSlider(posX, posY, name, text, minVal, maxVal, defaultVal, step, invHist, color, topShift = 0) {
 	
 	slidersValues.set(name, defaultVal);
 	
-	var margin = {top: 25, right: 10, bottom: 20, middle: 10, left: 10};
+	var shiftControl = {left: posX * controlBox.width,
+						top: posY * controlBox.height + topShift}
+	
 	var textShift = {top: 5, left: 5};
-	var controlWidth = 120;
+	var controlMargin = {top: 24, left: 20, right: 20, bottom: 5, middle: 8};
 	
-	var histBox = {top: margin.top, left: margin.left, width: controlWidth, height: 40};
-	var sliderBox = {top: histBox.top + histBox.height + margin.middle, left: margin.left, width: controlWidth, height: 20};
+	var controlWidth = controlBox.width - controlMargin.left - controlMargin.right;
+	var controlHeight = controlBox.height - topShift;
 	
-	var controlSvg = newGroup.append("svg")
-		.attr("width", margin.left + controlWidth + margin.right)
-		.attr("height", sliderBox.top + sliderBox.height + margin.bottom );
+	var sliderSize = 27;
+	
+	var sliderBox = {top: controlBox.top + controlHeight - sliderSize - controlMargin.bottom,
+			left: controlMargin.left, 
+			width: controlWidth,
+			height: sliderSize};
+	
+	var histBox = {top: controlMargin.top, 
+			left: controlMargin.left,
+			width: controlWidth,
+			height: sliderBox.top - controlMargin.middle - controlMargin.top};
 		
+	if(topShift == 0){
+		// não veio do setExtractionSlider, então precisa desenhar a caixa
+		drawRectangle(posX, posY, 1, 1);
+	}
+		
+	var controlSvg = svg.append("g")
+			.attr("transform", "translate(" + shiftControl.left + "," + shiftControl.top + ")");
+		//.attr("width", controlMargin.left + controlWidth + controlMargin.right)
+		//.attr("height", sliderBox.top + sliderBox.height + controlMargin.bottom );
+	
 	// texto
 	var titleTxt = controlSvg.append("text")
 			.attr("text-anchor", "start")
 			.attr("alignment-baseline", "before-edge")
-			.attr("transform", "translate(" + textShift.left + "," + textShift.top + ")")
+			.attr("x", textShift.left)
+			.attr("y", textShift.top)
 			.text(text + ": ");
 	var labelTxt = controlSvg.append("text")
 			.attr("text-anchor", "start")
 			.attr("alignment-baseline", "before-edge")
-			.attr("transform", "translate(" + (textShift.left + titleTxt._groups[0][0].clientWidth) + "," + textShift.top + ")")
+			.attr("x", textShift.left + titleTxt._groups[0][0].clientWidth)
+			.attr("y", textShift.top)
 			.text(defaultVal);
 			
 	// Histograma
@@ -44,6 +74,17 @@ function setSlider(newGroup, name, text, minVal, maxVal, defaultVal, step = 1, i
 	addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, controlSvg, sliderBox, labelTxt, histSvg);
 	
 	updateHistColor(histSvg, invHist, color, defaultVal);
+}
+
+function drawRectangle(posX, posY, sizeX, sizeY)
+{
+	svg.append("rect")
+		.attr("x", posX * controlBox.width)
+		.attr("y", posY * controlBox.height)
+		.attr('width', sizeX * controlBox.width)
+		.attr('height', sizeY * controlBox.height)
+		.attr('fill', "none")
+		.attr('stroke', 'black');
 }
 
 function addHist(name, minVal, maxVal, controlSvg, histBox) {
@@ -116,6 +157,7 @@ function addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, contr
 		.width(sliderBox.width)
 		.step(step)
 		.tickFormat(d3.format(stepFormat))
+		.tickPadding(-5)
 		.ticks(5)
 		.default(defaultVal)
 		.on('onchange', value => {

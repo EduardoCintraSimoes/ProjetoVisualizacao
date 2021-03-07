@@ -81,11 +81,11 @@ function showToolTip(d, i) {
 
 function moveToolTip(d, i) {
 	var coordinates = d3.pointer(d);
-	var x = (i.x1 < width/2) ? i.x1 : (i.x0 - toolTipWidth);
+	var x = (i.x1 < sankeyBox.width / 2) ? i.x1 : (i.x0 - toolTipWidth);
 	var y = Math.round(coordinates[1]);
 	
 	var toolHeight = +toolTip.select("#tooltipBg").attr("height");
-	if(y > (height - toolHeight - 20)) {
+	if(y > (sankeyBox.height - toolHeight - 20)) {
 		y -= toolHeight;
 	}
 
