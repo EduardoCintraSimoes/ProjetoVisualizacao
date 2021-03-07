@@ -1,4 +1,7 @@
 
+// mapa dos valores para otimizar o getSliderValue
+var slidersValues = new Map();
+
 function setExtractionSlider(newGroup, name, text) {
 	newGroup.text(text); // título
 	newGroup.append("br");
@@ -8,54 +11,49 @@ function setExtractionSlider(newGroup, name, text) {
 }
 
 function setSlider(newGroup, name, text, minVal, maxVal, defaultVal, step = 1, invHist = false, color = "#0074ff") {
-	var sliderTag = name + "Slider";
-	var labelTag = name + "Label";
 	
+	slidersValues.set(name, defaultVal);
+	
+	var margin = {top: 25, right: 10, bottom: 20, middle: 10, left: 10};
+	var textShift = {top: 5, left: 5};
+	var controlWidth = 120;
+	
+	var histBox = {top: margin.top, left: margin.left, width: controlWidth, height: 40};
+	var sliderBox = {top: histBox.top + histBox.height + margin.middle, left: margin.left, width: controlWidth, height: 20};
+	
+	var controlSvg = newGroup.append("svg")
+		.attr("width", margin.left + controlWidth + margin.right)
+		.attr("height", sliderBox.top + sliderBox.height + margin.bottom );
+		
 	// texto
-	newGroup.append("label").text(text + ": ");
-	newGroup.append("label").attr("id", labelTag).text(defaultVal);
-	newGroup.append("br");
-	
+	var titleTxt = controlSvg.append("text")
+			.attr("text-anchor", "start")
+			.attr("alignment-baseline", "before-edge")
+			.attr("transform", "translate(" + textShift.left + "," + textShift.top + ")")
+			.text(text + ": ");
+	var labelTxt = controlSvg.append("text")
+			.attr("text-anchor", "start")
+			.attr("alignment-baseline", "before-edge")
+			.attr("transform", "translate(" + (textShift.left + titleTxt._groups[0][0].clientWidth) + "," + textShift.top + ")")
+			.text(defaultVal);
+			
 	// Histograma
-	addHist(newGroup, name, minVal, maxVal);
-	newGroup.append("br");
+	var histSvg = addHist(name, minVal, maxVal, controlSvg, histBox);
 	
-	// barra
-	newGroup.append("input")
-		.attr("id", sliderTag)
-		.attr("type", "range")
-		.attr("step", step)
-		.attr("min", minVal)
-		.attr("max", maxVal)
-		.attr("value", defaultVal)
-		.attr("list", maxVal > 10 ? "tickmarks" : "smallTickmarks");
+	// Slider
+	addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, controlSvg, sliderBox, labelTxt, histSvg);
 	
-	updateHistColor(name, invHist, color);
-	
-	//evento de mudança do valor do slider
-	d3.select("#" + sliderTag).on("change",function(){
-		let aux = getSliderValue(name);
-		d3.select("#" + labelTag).text(aux);
-		updateHistColor(name, invHist, color);
-		drawData();
-	});
+	updateHistColor(histSvg, invHist, color, defaultVal);
 }
 
-function addHist(newGroup, name, minVal, maxVal) {
-	
-	var histTag = name + "Hist";
-	
-	var margin = {top: 0, right: 10, bottom: 0, left: 10};
-	
-	var histHeight = 40;
-	var histWidth = 110;
+function addHist(name, minVal, maxVal, controlSvg, histBox) {
 	
 	var data = histograms.get(name);
 	
 	// X axis: scale and draw:
 	var xScale = d3.scaleLinear()
 		.domain([minVal, maxVal])
-		.range([0, histWidth]);
+		.range([0, histBox.width]);
 	
 	var numBins = 20;
 	
@@ -73,16 +71,12 @@ function addHist(newGroup, name, minVal, maxVal) {
 	// Y axis: scale and draw:
 	var yScale = d3.scaleLinear()
 		.domain([0, maxHistValue])
-		.range([0, histHeight]);
+		.range([0, histBox.height]);
 	
-	var histSvg = newGroup.append("svg")
-		.attr("id", histTag)
-		.attr("width", histWidth + margin.left + margin.right)
-		.attr("height", histHeight + margin.top + margin.bottom)
-		.append("g")
-		.attr("transform", "translate(" + margin.left + "," + margin.top +")");
+	var histSvg = controlSvg.append("g")
+		.attr("transform", "translate(" + histBox.left + "," + histBox.top +")");
 	
-	var barWidth = histWidth / numBins;
+	var barWidth = histBox.width / numBins;
 	var halfBarWidth = barWidth / 2;
 	
 	// append the bar rectangles to the svg element
@@ -91,27 +85,59 @@ function addHist(newGroup, name, minVal, maxVal) {
       .enter()
       .append("rect")
         .attr("x", d => xScale(d.x0) - halfBarWidth)
-        .attr("y", d => histHeight - yScale(d.length))
+        .attr("y", d => histBox.height - yScale(d.length))
         .attr("width", barWidth )
         .attr("height", d => yScale(d.length) );
+		
+	return histSvg;
 }
 
-function updateHistColor(name, invHist, color) {
+function addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, controlSvg, sliderBox, labelTxt, histSvg) {
 	
-	var histTag = name + "Hist";
-	// append the bar rectangles to the svg element
+	var stepFormat = undefined;
+	if(step < 0.1)
+	{
+		stepFormat = ".2f";
+	}
+	else if(step < 1)
+	{
+		stepFormat = ".1f";
+	}
+	else
+	{
+		stepFormat = "d";
+	}
 	
-	var value = getSliderValue(name);
-	
-	histSvg = d3.select("#" + histTag);
-	
+	// barra
+	var slider = d3
+		.sliderBottom()
+		.min(minVal)
+		.max(maxVal)
+		.width(sliderBox.width)
+		.step(step)
+		.tickFormat(d3.format(stepFormat))
+		.ticks(5)
+		.default(defaultVal)
+		.on('onchange', value => {
+			slidersValues.set(name, value);
+			labelTxt.text(d3.format(stepFormat)(value));
+			updateHistColor(histSvg, invHist, color, value);
+			drawData();
+		})
+		;
+
+	controlSvg.append('g')
+		.attr('transform', 'translate(' + sliderBox.left + ',' + sliderBox.top + ')')
+		.call(slider);
+}
+
+function updateHistColor(histSvg, invHist, color, value) {
 	
 	histSvg.selectAll("rect")
-		.style("fill", function(d){ if(invHist == (d.x0 < value)){return color} else {return "#aaaaaa"}});
+		.style("fill", d => (invHist == (d.x0 < value)) ? color : "#aaaaaa");
 }
 
 // retorna o valor da barra
 function getSliderValue(name) {
-	var sliderTag = name + "Slider";
-	return +d3.select("#" + sliderTag).node().value;
+	return slidersValues.get(name);
 }

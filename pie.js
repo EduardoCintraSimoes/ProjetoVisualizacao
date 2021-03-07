@@ -53,6 +53,7 @@ function changePie(data) {
 		.data(pieData)
 		.join("path")
 			.attr("fill", d => d.data.color)
+			.attr("stroke", "white")
 			.attr("d", arc)
 		.append("title")
 			.text(d => d.data.name + ": " + d.data.value);
