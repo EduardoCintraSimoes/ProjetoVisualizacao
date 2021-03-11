@@ -2,6 +2,10 @@
 // mapa dos valores para otimizar o getSliderValue
 var slidersValues = new Map();
 
+var histsConfig = new Map();
+
+var numBins = 20;
+		
 function setExtractionSlider(posX, posY, name, text, color) {
 	
 	var titleTxt = svg.append("text")
@@ -68,12 +72,10 @@ function setSlider(posX, posY, name, text, minVal, maxVal, defaultVal, step, inv
 			.text(defaultVal);
 			
 	// Histograma
-	var histSvg = addHist(name, minVal, maxVal, controlSvg, histBox);
+	var histSvg = addHist(name, minVal, maxVal, defaultVal, controlSvg, histBox, color, invHist);
 	
 	// Slider
-	addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, controlSvg, sliderBox, labelTxt, histSvg);
-	
-	updateHistColor(histSvg, invHist, color, defaultVal);
+	addSlider(name, minVal, maxVal, defaultVal, step, controlSvg, sliderBox, labelTxt, histSvg);
 }
 
 function drawRectangle(posX, posY, sizeX, sizeY)
@@ -87,53 +89,91 @@ function drawRectangle(posX, posY, sizeX, sizeY)
 		.attr('stroke', 'black');
 }
 
-function addHist(name, minVal, maxVal, controlSvg, histBox) {
+function addHist(name, minVal, maxVal, defaultVal, controlSvg, histBox, color, invHist) {
 	
-	var data = histograms.get(name);
-	
+	var histSvg = controlSvg.append("g")
+		.attr("transform", "translate(" + histBox.left + "," + histBox.top +")");
+		
 	// X axis: scale and draw:
 	var xScale = d3.scaleLinear()
 		.domain([minVal, maxVal])
 		.range([0, histBox.width]);
 	
-	var numBins = 20;
+	histsConfig.set(name, {xScale: xScale, boxHeight: histBox.height, histSvg: histSvg, color: color, invHist: invHist});
 	
-	// set the parameters for the histogram
-	var histogram = d3.histogram()
-		//.value(d => d)   // I need to give the vector of value
-		.domain(xScale.domain())  // then the domain of the graphic
-		.thresholds(xScale.ticks(numBins)); // then the numbers of bins
-
-	// And apply this function to data to get the bins
-	var bins = histogram(data);
-
-	var maxHistValue = d3.max(bins, d => d.length);
-
-	// Y axis: scale and draw:
-	var yScale = d3.scaleLinear()
-		.domain([0, maxHistValue])
-		.range([0, histBox.height]);
-	
-	var histSvg = controlSvg.append("g")
-		.attr("transform", "translate(" + histBox.left + "," + histBox.top +")");
-	
-	var barWidth = histBox.width / numBins;
-	var halfBarWidth = barWidth / 2;
-	
-	// append the bar rectangles to the svg element
-	histSvg.selectAll("rect")
-      .data(bins)
-      .enter()
-      .append("rect")
-        .attr("x", d => xScale(d.x0) - halfBarWidth)
-        .attr("y", d => histBox.height - yScale(d.length))
-        .attr("width", barWidth )
-        .attr("height", d => yScale(d.length) );
+	updateHist(name, defaultVal);
 		
 	return histSvg;
 }
 
-function addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, controlSvg, sliderBox, labelTxt, histSvg) {
+function updateHist(name, value) {
+	
+	if(histsConfig.has(name))
+	{
+		var configs = histsConfig.get(name);
+		var xScale = configs.xScale;
+		var boxHeight = configs.boxHeight;
+		var histSvg = configs.histSvg;
+		var color = configs.color;
+		var invHist = configs.invHist;
+		
+		var histBox = {height: boxHeight, width: xScale.range()[1]};
+		
+		// set the parameters for the histogram
+		var histogram = d3.histogram()
+			.value(d => d.val)
+			.domain(xScale.domain())  // then the domain of the graphic
+			.thresholds(xScale.ticks(numBins + 1)); // then the numbers of bins
+
+		var data = Array.from(histograms.get(name).values());
+		
+		// And apply this function to data to get the bins
+		var bins = histogram(data);
+		
+		bins.forEach(d => {
+			d.neg = 0;
+			d.pos = 0;
+			d.forEach(e => {
+				d.pos += e.pos;
+				d.neg += e.neg;
+			});
+			d.total = d.pos + d.neg;
+		});
+		
+		var maxHistValue = d3.max(bins, d => d.total);
+
+		// Y axis: scale and draw:
+		var yScale = d3.scaleLinear()
+			.domain([0, maxHistValue])
+			.range([0, histBox.height]);
+		
+		var barWidth = histBox.width / numBins;
+		var halfBarWidth = barWidth / 2;
+		
+		// append the bar rectangles to the svg element
+		histSvg.selectAll("rect").remove();
+		var histEnter = histSvg.selectAll("rect")
+			.data(bins)
+			.enter();
+			
+		histEnter.append("rect")
+			.attr("x", d => xScale(d.x0) )
+			.attr("y", d => histBox.height - yScale(d.total))
+			.attr("width", barWidth )
+			.attr("height", d => yScale(d.total) )
+			.style("fill", d => (invHist == (d.x0 < value)) ? color : "#aaaaaa");
+			
+		histEnter.append("rect")
+			.attr("x", d => xScale(d.x0) )
+			.attr("y", d => histBox.height - yScale(d.total))
+			.attr("width", barWidth )
+			.attr("height", d => yScale(d.neg) )
+			.style("fill", d => "#000000aa");
+		
+	}
+}
+
+function addSlider(name, minVal, maxVal, defaultVal, step, controlSvg, sliderBox, labelTxt, histSvg) {
 	
 	var stepFormat = undefined;
 	if(step < 0.1)
@@ -163,7 +203,6 @@ function addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, contr
 		.on('onchange', value => {
 			slidersValues.set(name, value);
 			labelTxt.text(d3.format(stepFormat)(value));
-			updateHistColor(histSvg, invHist, color, value);
 			drawData();
 		})
 		;
@@ -173,13 +212,14 @@ function addSlider(name, minVal, maxVal, defaultVal, step, invHist, color, contr
 		.call(slider);
 }
 
-function updateHistColor(histSvg, invHist, color, value) {
-	
-	histSvg.selectAll("rect")
-		.style("fill", d => (invHist == (d.x0 < value)) ? color : "#aaaaaa");
-}
-
 // retorna o valor da barra
 function getSliderValue(name) {
 	return slidersValues.get(name);
+}
+
+function updateHistograms() {
+	histsConfig.forEach((d, name) => {
+		var value = getSliderValue(name);
+		updateHist(name, value);
+	});
 }

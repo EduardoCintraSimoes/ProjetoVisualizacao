@@ -29,6 +29,8 @@
 			let screenHeight = 930;
 			var screenMargin = {top: 2, bottom: 2, left: 2, right: 2};
 			
+			var histograms = new Map();
+
 			let svgBox = { top: screenMargin.top,
 				left: screenMargin.left,
 				width: screenWidth - screenMargin.left - screenMargin.right,
@@ -51,8 +53,6 @@
 				width: controlBox.width * (xDivs - 2) - controlsDist - rightTextWidth,
 				height: controlBox.height * (yDivs - 1) - controlsDist - titleHeight};
 			
-			var histograms = new Map();
-
 			var svg = d3.select("body").append("svg")
 				.attr("viewBox", "0 0 " + screenWidth + " " + screenHeight)
 				.classed("svg-content-responsive", true)
@@ -179,10 +179,14 @@
 				mapLinks = new Map();
 				mapNodes = new Map();
 				
+				clearHistogram();
+	
 				// pega os valores
 				dataset.forEach(function(element){
 					element.updateMap();
 				});
+				
+				updateHistograms();
 				
 				// dados
 				var nodes = Array.from(mapNodes.values());

@@ -9,13 +9,7 @@ class QualityInfo {
 		this.qaFocus = +element.qaFocus * 100;
 		this.qaShine = +element.qaShine * 100;
 		
-		incrementHistogram("qaDpi", this.qaDPI);
-		incrementHistogram("qaDensity", this.qaDensity);
-		incrementHistogram("qaInclination", this.qaInclination);
-		incrementHistogram("qaLightness", this.qaLightness);
-		incrementHistogram("qaShadow", this.qaShadow);
-		incrementHistogram("qaFocus", this.qaFocus);
-		incrementHistogram("qaShine", this.qaShine);
+		this.updatePosHist(1, 0);
 	}
 	getResult() {
 		let order = 1;
@@ -56,13 +50,24 @@ class QualityInfo {
 		
 		return [order, nameValue, colorValue];
 	}
+	
+	updatePosHist(posQtd, negQtd) {
+		incrementHistogram("qaDpi", this.qaDPI, posQtd, negQtd);
+		incrementHistogram("qaDensity", this.qaDensity, posQtd, negQtd);
+		incrementHistogram("qaInclination", this.qaInclination, posQtd, negQtd);
+		incrementHistogram("qaLightness", this.qaLightness, posQtd, negQtd);
+		incrementHistogram("qaShadow", this.qaShadow, posQtd, negQtd);
+		incrementHistogram("qaFocus", this.qaFocus, posQtd, negQtd);
+		incrementHistogram("qaShine", this.qaShine, posQtd, negQtd);
+	}
 }
 
 class ClassificationInfo {
 	constructor(element) {
 		this.classification = element.classification;
 		this.confidence = +element.classificationConf * 100;
-		incrementHistogram("classifConf", this.confidence);
+		
+		this.updatePosHist(1, 0);
 	}
 	getResult() {
 		if (this.confidence >= getSliderValue("classifConf")){
@@ -73,6 +78,10 @@ class ClassificationInfo {
 			return [2, "Desconhecido", "#dddd00"];
 		}
 	}
+	
+	updatePosHist(posQtd, negQtd) {
+		incrementHistogram("classifConf", this.confidence, posQtd, negQtd);
+	}
 }
 
 class ExtractionInfo {
@@ -82,17 +91,17 @@ class ExtractionInfo {
 		this.similarity = +sim;
 		this.confidence = +conf;
 		
-		incrementHistogram(this.name + "Sim", this.similarity);
-		incrementHistogram(this.name + "Conf", this.confidence);
+		this.updatePosHist(1, 0);
 	}
+	
 	getResult() {
 	
 		let order = undefined;
 		let nameValue = undefined;
 		let colorValue =  undefined;
 	
-		let realStatus = this.confidence >= getSliderValue(this.name + "Sim");
-		let predictedStatus = this.similarity >= getSliderValue(this.name + "Conf");
+		let realStatus = this.similarity >= getSliderValue(this.name + "Sim");
+		let predictedStatus = this.confidence >= getSliderValue(this.name + "Conf");
 		
 		if (predictedStatus) {
 			if (realStatus) {
@@ -120,6 +129,11 @@ class ExtractionInfo {
 		}
 		return [order, nameValue, colorValue];
 	}
+	
+	updatePosHist(posQtd, negQtd) {
+		incrementHistogram(this.name + "Sim", this.similarity, posQtd, negQtd);
+		incrementHistogram(this.name + "Conf", this.confidence, posQtd, negQtd);
+	}
 }
 		
 class ElementInfo {
@@ -141,31 +155,49 @@ class ElementInfo {
 		
 		mapNodes.get("0_Base").qtd += qtd;
 		
+		var posQtd = 0;
+		var negQtd = 0;
+		
 		if(validProcess) {
 			
 			// qualidade
 			let res = this.qaInfo.getResult();
 			let qaName = "2_" + res[1];
 			incrementSankeyData(processName, qaName, qtd, res[0], res[2]);
-			if(res[0] == 0) {
+			var isValid = res[0] == 0;
+			
+			let className = undefined;
+			if(isValid) {
 			
 				// classificação
 				res = this.classInfo.getResult();
-				let className = "3_" + res[1];
+				className = "3_" + res[1];
 				incrementSankeyData(qaName, className, qtd, res[0], res[2]);
-				if(res[0] == 0) {
-
-					this.extractInfo.forEach(d => {
-						// campos
-						let extractName = "4_" + d.text;
-						incrementSankeyData(className, extractName, 1, 0, "#aaaaaa");
-						
-						// extração
-						res = d.getResult();
-						incrementSankeyData(extractName, "5_" + res[1], 1, res[0], res[2]);
-					});
-				}
+				isValid = res[0] == 0;
 			}
+			
+			this.extractInfo.forEach(d => {
+				
+				res = d.getResult();
+				
+				if(isValid) {
+					// campos
+					let extractName = "4_" + d.text;
+					incrementSankeyData(className, extractName, 1, 0, "#aaaaaa");
+					
+					// extração
+					incrementSankeyData(extractName, "5_" + res[1], 1, res[0], res[2]);
+				}
+					
+				let posVal = (res[0] == 0 || res[0] == 2) ? 1 : 0;
+				let negVal = 1 - posVal;
+				posQtd += posVal;
+				negQtd += negVal;
+				d.updatePosHist(posVal, negVal);
+			});
+
+			this.classInfo.updatePosHist(posQtd, negQtd);			
+			this.qaInfo.updatePosHist(posQtd, negQtd);
 		}
 	}
 }
@@ -173,7 +205,7 @@ class ElementInfo {
 function loadDataset(data) {
 	dataset = [];
 
-	data.forEach(function(element){
+	data.forEach(function(element) {
 		let qaInfo = new QualityInfo(element, histograms);
 		let classInfo = new ClassificationInfo(element);
 	
@@ -206,9 +238,22 @@ function incrementSankeyData(leftName, rightName, qtd, orderLvl, colorVal) {
 	}
 }
 
-function incrementHistogram(name, value) {
+function incrementHistogram(name, value, posQtd, negQtd) {
 	if (!histograms.has(name)) {
-		histograms.set(name, []);
+		histograms.set(name, new Map());
 	}
-	histograms.get(name).push(value);
+	var hist = histograms.get(name);
+
+	if (!hist.has(value)) {
+		hist.set(value, {val: value, pos: posQtd, neg: negQtd});
+	}
+	else{
+		var histVal = hist.get(value);
+		histVal.pos += posQtd;
+		histVal.neg += negQtd;
+	}
+}
+
+function clearHistogram() {
+	histograms = new Map();
 }
