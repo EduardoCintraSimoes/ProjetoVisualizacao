@@ -70,12 +70,12 @@ class ClassificationInfo {
 		this.updatePosHist(1, 0);
 	}
 	getResult() {
+		let isValid = this.classification === "rg_back";
 		if (this.confidence >= getSliderValue("classifConf")){
-			let isValid = this.classification === "rg_back";
 			return [isValid ? 0 : 1, this.classification, isValid ? "#00dd00" : "#dd0000"];
 		}
 		else {
-			return [2, "Desconhecido", "#dddd00"];
+			return [isValid ? 2 : 3, "Desconhecido", "#dddd00"];
 		}
 	}
 	
@@ -155,9 +155,6 @@ class ElementInfo {
 		
 		mapNodes.get("0_Base").qtd += qtd;
 		
-		var posQtd = 0;
-		var negQtd = 0;
-		
 		if(validProcess) {
 			
 			// qualidade
@@ -166,19 +163,30 @@ class ElementInfo {
 			incrementSankeyData(processName, qaName, qtd, res[0], res[2]);
 			var isValid = res[0] == 0;
 			
-			let className = undefined;
-			if(isValid) {
+			// classificação
+			res = this.classInfo.getResult();
+			var className = "3_" + res[1];
+			let validRealClass = res[0] == 0 || res[0] == 2;
+			let validClassif = res[0] == 0;
 			
-				// classificação
-				res = this.classInfo.getResult();
-				className = "3_" + res[1];
+			if(isValid) {
+				// conecta qualidade -> classificação
 				incrementSankeyData(qaName, className, qtd, res[0], res[2]);
-				isValid = res[0] == 0;
+				isValid = validClassif;
+				
+				// atualiza o histograma da classificação
+				this.classInfo.updatePosHist(validRealClass ? 1 : 0, validRealClass ? 0 : 1);
 			}
 			
+			var posQtd = 0;
+			var negQtd = 0;
 			this.extractInfo.forEach(d => {
 				
 				res = d.getResult();
+				let posVal = (res[0] == 0 || res[0] == 2) ? 1 : 0; // Classe real = TP | FN
+				let negVal = 1 - posVal; // complemento
+				posQtd += posVal;
+				negQtd += negVal;
 				
 				if(isValid) {
 					// campos
@@ -187,16 +195,16 @@ class ElementInfo {
 					
 					// extração
 					incrementSankeyData(extractName, "5_" + res[1], 1, res[0], res[2]);
+					d.updatePosHist(posVal, negVal);
 				}
-					
-				let posVal = (res[0] == 0 || res[0] == 2) ? 1 : 0;
-				let negVal = 1 - posVal;
-				posQtd += posVal;
-				negQtd += negVal;
-				d.updatePosHist(posVal, negVal);
 			});
-
-			this.classInfo.updatePosHist(posQtd, negQtd);			
+			
+			if(!validRealClass) {
+				// classe errada = errar todos os campos
+				negQtd += posQtd;
+				posQtd = 0;
+			}
+			// atualiza os histogramas de qualidade levando em consideração o número de campos corretos
 			this.qaInfo.updatePosHist(posQtd, negQtd);
 		}
 	}
