@@ -217,15 +217,22 @@ function loadDataset(data) {
 		let qaInfo = new QualityInfo(element, histograms);
 		let classInfo = new ClassificationInfo(element);
 	
-		dataset.push(new ElementInfo(element.processError, qaInfo, classInfo, [
+		let extractionList = [
 			new ExtractionInfo("DATA_EXPEDICAO", "Data de Expedição", element.DATA_EXPEDICAOSim, element.DATA_EXPEDICAOSim),
 			new ExtractionInfo("DATA_NASCIMENTO", "Data de Nascimento", element.DATA_NASCIMENTOSim, element.DATA_NASCIMENTOConf),
 			new ExtractionInfo("FILIACAO_A", "Filiação A", element.FILIACAO_ASim, element.FILIACAO_AConf),
 			new ExtractionInfo("FILIACAO_B", "Filiação B", element.FILIACAO_BSim, element.FILIACAO_BConf),
 			new ExtractionInfo("NATURALIDADE", "Naturalidade", element.NATURALIDADESim, element.NATURALIDADEConf),
 			new ExtractionInfo("NOME", "Nome", element.NOMESim, element.NOMEConf),
-			new ExtractionInfo("NUM_CPF", "CPF", element.NUM_CPFSim, element.NUM_CPFConf),
-			new ExtractionInfo("NUM_RG", "Registro Geral", element.NUM_RGSim, element.NUM_RGConf)]));
+			new ExtractionInfo("NUM_RG", "Registro Geral", element.NUM_RGSim, element.NUM_RGConf)];
+	
+		if(element.NUM_CPFSim < 100 || element.NUM_CPFConf > 0)	{
+			// tratamento para documentos que não possuem CPF
+			extractionList.push(new ExtractionInfo("NUM_CPF", "CPF", element.NUM_CPFSim, element.NUM_CPFConf));
+		}
+		
+		dataset.push(new ElementInfo(element.processError, qaInfo, classInfo, extractionList));
+			
 	});
 	return dataset;
 }

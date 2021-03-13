@@ -112,8 +112,6 @@
 			//Seta os eventos
 			function setInterface(){
 			
-				var newGroup = d3.select("body").append("table").attr("border",1);//.append("g");
-				
 				var qaColor = "#00d060";
 				var classifColor = "#ed9000";
 				var extractColor = "#0074ff";
@@ -140,6 +138,7 @@
 				setExtractionSlider(xDivs - 2, 6, "NOME", "Nome", extractColor);
 				setExtractionSlider(xDivs - 2, 7, "NUM_RG", "RG", extractColor);
 				
+				var newGroup = d3.select("body").append("text").text("OBS: As sombras nos histogramas representam elementos negativos");
 				drawData();
 			}
 
